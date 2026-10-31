@@ -291,7 +291,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 text-xs font-bold text-neutral-600">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#10B981]" />
-            <span>Nusasky Aviation Community · 200 Members Milestone</span>
+            <span>Nusasky Aviation Community · 200 Members Anniversary</span>
           </div>
         </div>
       </footer>
