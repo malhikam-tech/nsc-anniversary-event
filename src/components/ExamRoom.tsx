@@ -37,6 +37,10 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
     participant.violations_count || 0
   );
   const [showWarningModal, setShowWarningModal] = useState(false);
+  const [lastViolationAction, setLastViolationAction] = useState<string>(
+    'Berpindah tab atau aplikasi lain di HP'
+  );
+  const [violationTime, setViolationTime] = useState<string>('');
   const [isDisqualified, setIsDisqualified] = useState(
     participant.status === 'disqualified'
   );
@@ -56,7 +60,7 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
   const answeredCount = Object.keys(answers).length;
 
   // 1. Anti-Cheat: Tab Switch, App Switch, and Window Blur Detection (Mobile & Desktop)
-  const handleCheatViolation = useCallback(() => {
+  const handleCheatViolation = useCallback((actionDesc?: string) => {
     if (isDisqualifiedRef.current) return;
 
     // Cooldown debouncing (1.5s): Mencegah double-strike jika browser mobile mengirim visibilitychange dan pagehide bersamaan
@@ -66,6 +70,10 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
     }
     lastViolationTimeRef.current = now;
 
+    const action = actionDesc || 'Berpindah tab atau membuka aplikasi lain di HP';
+    setLastViolationAction(action);
+    setViolationTime(new Date().toLocaleTimeString('id-ID'));
+
     const nextCount = violationsRef.current + 1;
     setViolationsCount(nextCount);
     setShowWarningModal(true);
@@ -74,7 +82,7 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
       setIsDisqualified(true);
       disqualifyParticipant(
         participant.phone,
-        'Pelanggaran anti-curang: 3 kali meninggalkan layar ujian/pindah tab/aplikasi'
+        `Pelanggaran anti-curang (3x): ${action}`
       );
       onDisqualified();
     } else {
@@ -82,7 +90,8 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
         participant.phone,
         answers,
         nextCount,
-        'in_progress'
+        'in_progress',
+        action
       );
     }
   }, [answers, onDisqualified, participant.phone]);
@@ -91,25 +100,24 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
     // Desktop & Mobile: Visibility Change (tab switch, minimize, home button, app switcher)
     const handleVisibilityChange = () => {
       if (document.hidden || document.visibilityState === 'hidden') {
-        handleCheatViolation();
+        handleCheatViolation('Berpindah tab atau membuka aplikasi lain di HP');
       }
     };
 
     // Mobile: Pagehide (iOS Safari & Android Chrome app switch / tab switch)
     const handlePageHide = () => {
-      handleCheatViolation();
+      handleCheatViolation('Meninggalkan browser / beralih aplikasi di HP');
     };
 
     // Page Lifecycle API: Freeze (Mobile background freeze)
     const handleFreeze = () => {
-      handleCheatViolation();
+      handleCheatViolation('Browser diminimalkan / dibekukan di latar belakang');
     };
 
     // Desktop & Split-Screen Mobile: Focus Blur
     const handleWindowBlur = () => {
-      // Pastikan bukan blur internal, melainkan fokus berpindah ke luar jendela browser
       if (document.hidden || !document.hasFocus()) {
-        handleCheatViolation();
+        handleCheatViolation('Layar terbagi (split-screen) atau kehilangan fokus browser');
       }
     };
 
@@ -247,6 +255,8 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
         isOpen={showWarningModal}
         violationsCount={violationsCount}
         maxViolations={3}
+        detectedAction={lastViolationAction}
+        violationTime={violationTime}
         onDismiss={() => setShowWarningModal(false)}
         isDisqualified={isDisqualified}
       />
