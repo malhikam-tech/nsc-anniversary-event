@@ -8,13 +8,11 @@ import {
   Download,
   ZoomIn,
   Eye,
-  Copy,
   Check,
   X,
   ExternalLink,
   Shield,
   Search,
-  FileCode,
   Users,
 } from 'lucide-react';
 import { Participant, ExamSettings } from '../types';
@@ -40,9 +38,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 }) => {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'monitoring' | 'recap' | 'schema'>(
-    'monitoring'
-  );
+  const [activeTab, setActiveTab] = useState<'monitoring' | 'recap'>('monitoring');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedProofUrl, setSelectedProofUrl] = useState<{
@@ -55,7 +51,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     examSettings.announcement || ''
   );
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  const [copiedSql, setCopiedSql] = useState(false);
 
   // Load participants
   const loadParticipants = async () => {
@@ -238,53 +233,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  const sqlSchemaText = `-- Jalankan skrip ini di SQL Editor Supabase:
-CREATE TABLE IF NOT EXISTS public.exam_settings (
-    id TEXT PRIMARY KEY DEFAULT 'singleton',
-    is_open BOOLEAN NOT NULL DEFAULT false,
-    announcement TEXT DEFAULT 'Ujian Aviasi Nusasky 200 Member Giveaway akan segera dibuka oleh Admin!',
-    max_violations INTEGER NOT NULL DEFAULT 3,
-    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
-INSERT INTO public.exam_settings (id, is_open, announcement, max_violations)
-VALUES ('singleton', false, 'Ujian Aviasi Nusasky 200 Member Giveaway akan segera dibuka oleh Admin!', 3)
-ON CONFLICT (id) DO NOTHING;
-
-CREATE TABLE IF NOT EXISTS public.participants (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username TEXT NOT NULL,
-    phone TEXT NOT NULL UNIQUE,
-    proof_url TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'waiting',
-    violations_count INTEGER NOT NULL DEFAULT 0,
-    score NUMERIC NOT NULL DEFAULT 0,
-    correct_answers INTEGER NOT NULL DEFAULT 0,
-    answers JSONB NOT NULL DEFAULT '{}'::jsonb,
-    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
-    submitted_at TIMESTAMPTZ,
-    last_active TIMESTAMPTZ DEFAULT timezone('utc'::text, now()),
-    disqualification_reason TEXT
-);
-
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES ('proofs', 'proofs', true, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/heic'])
-ON CONFLICT (id) DO UPDATE SET public = true;
-
-ALTER TABLE public.exam_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.participants ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allow public all exam_settings" ON public.exam_settings FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public all participants" ON public.participants FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public storage proofs" ON storage.objects FOR ALL USING (bucket_id = 'proofs') WITH CHECK (bucket_id = 'proofs');
-`;
-
-  const copySqlToClipboard = () => {
-    navigator.clipboard.writeText(sqlSchemaText);
-    setCopiedSql(true);
-    setTimeout(() => setCopiedSql(false), 2500);
   };
 
   return (
@@ -472,18 +420,6 @@ CREATE POLICY "Allow public storage proofs" ON storage.objects FOR ALL USING (bu
           >
             <Trophy className="w-4 h-4" />
             <span>Rekap Pemenang ({leaderboard.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('schema')}
-            className={`px-4 py-2 text-xs sm:text-sm font-black rounded-xl border-2 border-black transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'schema'
-                ? 'bg-[#818CF8] text-black brutal-shadow-sm'
-                : 'bg-white text-neutral-700 hover:bg-neutral-100'
-            }`}
-          >
-            <FileCode className="w-4 h-4" />
-            <span>SQL Schema Supabase</span>
           </button>
         </div>
 
@@ -847,53 +783,7 @@ CREATE POLICY "Allow public storage proofs" ON storage.objects FOR ALL USING (bu
         </div>
       )}
 
-      {/* TAB 3: SQL SCHEMA SUPABASE */}
-      {activeTab === 'schema' && (
-        <div className="space-y-4">
-          <div className="bg-white border-2 border-black rounded-2xl p-6 brutal-shadow">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-              <div>
-                <h3 className="text-xl font-black text-black">
-                  Skema SQL Database & Storage Supabase
-                </h3>
-                <p className="text-xs sm:text-sm font-semibold text-neutral-600 mt-1">
-                  Jalankan skrip SQL di bawah ini di <strong>SQL Editor</strong> dashboard proyek Supabase Anda:{' '}
-                  <a
-                    href="https://supabase.com/dashboard/project/ckbirxkmyglcblqwxuvf/sql"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[#818CF8] underline font-bold inline-flex items-center gap-1"
-                  >
-                    <span>Buka Supabase SQL Editor</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                </p>
-              </div>
 
-              <button
-                onClick={copySqlToClipboard}
-                className="px-4 py-2.5 bg-[#FFE600] text-black font-black text-xs rounded-xl border-2 border-black brutal-shadow-sm brutal-btn flex items-center gap-2 cursor-pointer"
-              >
-                {copiedSql ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    <span>Berhasil Disalin!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4" />
-                    <span>Salin Skrip SQL</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            <pre className="p-4 bg-neutral-900 text-neutral-100 rounded-xl text-xs font-mono overflow-x-auto max-h-[460px] leading-relaxed border-2 border-black">
-              {sqlSchemaText}
-            </pre>
-          </div>
-        </div>
-      )}
 
       {/* Modal Foto Bukti Diri Peserta */}
       {selectedProofUrl && (

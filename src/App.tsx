@@ -10,6 +10,7 @@ import { WaitingLobby } from './components/WaitingLobby';
 import { ExamRoom } from './components/ExamRoom';
 import { SubmissionSuccess } from './components/SubmissionSuccess';
 import { AdminDashboard } from './components/AdminDashboard';
+import { DisqualificationModal } from './components/DisqualificationModal';
 import { Participant, ExamSettings } from './types';
 import { fetchExamSettings, supabase } from './lib/supabase';
 import { Lock, AlertTriangle, ArrowLeft } from 'lucide-react';
@@ -95,6 +96,36 @@ export default function App() {
       localStorage.setItem('nusasky_active_participant', JSON.stringify(participant));
     }
   }, [participant]);
+
+  // Sync participant status in real-time (detects admin block or anti-cheat)
+  useEffect(() => {
+    if (!participant?.phone) return;
+
+    const syncParticipant = async () => {
+      try {
+        const { data } = await supabase
+          .from('participants')
+          .select('*')
+          .eq('phone', participant.phone)
+          .maybeSingle();
+
+        if (data) {
+          if (data.status === 'disqualified') {
+            setParticipant((prev) => (prev ? { ...prev, ...data } : (data as Participant)));
+            setExamStage('disqualified');
+          } else if (data.status === 'in_progress' && examStage === 'disqualified') {
+            setParticipant((prev) => (prev ? { ...prev, ...data } : (data as Participant)));
+            setExamStage('in_progress');
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    const interval = setInterval(syncParticipant, 2500);
+    return () => clearInterval(interval);
+  }, [participant?.phone, examStage]);
 
   // Handle Admin Login
   const handleAdminLoginSubmit = (e: React.FormEvent) => {
@@ -248,6 +279,14 @@ export default function App() {
         ) : (
           /* Participant View */
           <>
+            {/* Pop-up Modal Didiskualifikasi */}
+            {participant && (participant.status === 'disqualified' || examStage === 'disqualified') && (
+              <DisqualificationModal
+                participant={participant}
+                onExit={handleSwitchUser}
+              />
+            )}
+
             {!participant || examStage === 'register' ? (
               <ParticipantRegistration
                 onRegistered={handleRegistered}
@@ -268,20 +307,14 @@ export default function App() {
                 onFinishExam={handleFinishExam}
                 onDisqualified={handleDisqualified}
               />
-            ) : (
+            ) : examStage === 'submitted' ? (
               <SubmissionSuccess
                 participant={participant}
                 score={participant.score}
                 correctCount={participant.correct_answers}
-                onRestart={() => {
-                  if (participant.status === 'disqualified') {
-                    handleSwitchUser();
-                  } else {
-                    setExamStage('waiting');
-                  }
-                }}
+                onRestart={() => setExamStage('waiting')}
               />
-            )}
+            ) : null}
           </>
         )}
       </main>
