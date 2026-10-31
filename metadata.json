@@ -1,0 +1,6 @@
+{
+  "name": "Nusasky Aviation Quiz",
+  "description": "Platform ujian aviasi Nusasky Community 200 Member Giveaway dengan sistem anti-curang, live monitoring admin, dan kalkulasi pemenang otomatis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
