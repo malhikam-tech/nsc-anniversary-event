@@ -136,7 +136,7 @@ export default function App() {
       setAdminPasswordError(null);
       setAdminPasswordInput('');
     } else {
-      setAdminPasswordError('Kata sandi salah! Akses khusus pengurus komunitas.');
+      setAdminPasswordError('Kata sandi salah! Akses khusus admin komunitas.');
     }
   };
 
